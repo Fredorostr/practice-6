@@ -1,29 +1,27 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 #include <memory>
 #include <random>
-#include <limits>
-#include <algorithm>
+#include <stdexcept>
 
 using namespace std;
 
+// ================= БАЗОВЫЙ КЛАСС =================
 
 class Hero {
 protected:
     string name;
     int hp;
     int maxHp;
-    int damage;
-
-    int damageBonus = 0;
-    int damageReduction = 0;
-    int shield = 0;
-    bool defending = false;
+    int attack;
+    bool defending;
 
 public:
-    Hero(string n, int h, int d)
-        : name(n), hp(h), maxHp(h), damage(d) {}
+    Hero(string n, int health, int damage)
+        : name(n), hp(health), maxHp(health),
+          attack(damage), defending(false) {}
 
     virtual ~Hero() = default;
 
@@ -39,409 +37,344 @@ public:
         return hp > 0;
     }
 
-    virtual void useAbility(Hero& enemy) = 0;
-
-    virtual string getAbilityName() const = 0;
-
-    virtual string getAbilityDescription() const = 0;
-
-    void attack(Hero& enemy, mt19937& rng) {
-        uniform_int_distribution<int> randomDamage(-2, 2);
-
-        int finalDamage = damage + randomDamage(rng);
-
-        finalDamage += damageBonus;
-        finalDamage -= damageReduction;
-
-        finalDamage = max(1, finalDamage);
-
-        damageBonus = 0;
-        damageReduction = 0;
-
-        cout << name << " атакует противника!\n";
-
-        enemy.takeDamage(finalDamage);
+    virtual int getBaseDamage() const {
+        return attack;
     }
 
-    void takeDamage(int incomingDamage) {
-        int finalDamage = incomingDamage;
+    void defend() {
+        defending = true;
+        cout << name << " принимает защитную стойку!\n";
+    }
 
-        // Щит
-        if (shield > 0) {
-            int absorbed = min(shield, finalDamage);
-
-            finalDamage -= absorbed;
-            shield = 0;
-
-            cout << name << " поглощает "
-                 << absorbed << " урона щитом!\n";
-        }
-
+    void takeDamage(int damage) {
         if (defending) {
-            finalDamage /= 2;
+            damage /= 2;
             defending = false;
 
             cout << name << " блокирует часть урона!\n";
         }
 
-        hp -= finalDamage;
+        hp -= damage;
 
         if (hp < 0)
             hp = 0;
 
-        cout << name << " получает "
-             << finalDamage << " урона.\n";
-
-        cout << "Здоровье " << name << ": "
-             << hp << "/" << maxHp << "\n";
+        cout << name << " получает " << damage
+             << " урона. HP: " << hp << "/" << maxHp << "\n";
     }
 
-    void defend() {
-        defending = true;
+    void reset() {
+        hp = maxHp;
+        defending = false;
+    }
 
+    virtual void showInfo() const {
         cout << name
-             << " принимает защитную стойку!\n";
-    }
-
-    void showInfo() const {
-        cout << name
-             << " | HP: " << hp << "/" << maxHp
-             << " | Урон: " << damage << "\n";
-    }
-
-protected:
-    friend class Warrior;
-
-    void increaseDamage(int value) {
-        damageBonus = value;
-    }
-
-    void weakenEnemy(int value) {
-        damageReduction = value;
-    }
-
-    void activateShield(int value) {
-        shield = value;
+             << " | HP: " << hp
+             << " | Атака: " << attack << "\n";
     }
 };
+
+// ================= КЛАСС ЛУЧНИКА =================
 
 class Archer : public Hero {
 public:
-    Archer() : Hero("Лучник", 90, 15) {}
+    Archer() : Hero("Лучник", 80, 25) {}
 
-    void useAbility(Hero& enemy) override {
-        increaseDamage(7);
-
-        cout << name
-             << " использует способность: "
-             << "меткий выстрел!\n";
-
-        cout << "Следующая атака нанесёт "
-             << "дополнительно 7 урона.\n";
+    int getBaseDamage() const override {
+        return attack;
     }
 
-    string getAbilityName() const override {
-        return "Меткий выстрел";
-    }
-
-    string getAbilityDescription() const override {
-        return "Увеличивает следующий урон на 7";
+    void showInfo() const override {
+        cout << "Лучник | HP: " << hp
+             << " | Атака: " << attack
+             << " | Быстрый и меткий боец\n";
     }
 };
 
+// ================= КЛАСС ВОИНА =================
 
 class Warrior : public Hero {
 public:
-    Warrior() : Hero("Воин", 120, 12) {}
+    Warrior() : Hero("Воин", 120, 20) {}
 
-    void useAbility(Hero& enemy) override {
-        enemy.weakenEnemy(5);
-
-        cout << name
-             << " использует способность: "
-             << "ослабление противника!\n";
-
-        cout << "Следующая атака противника "
-             << "будет слабее на 5 урона.\n";
+    int getBaseDamage() const override {
+        return attack;
     }
 
-    string getAbilityName() const override {
-        return "Ослабление";
-    }
-
-    string getAbilityDescription() const override {
-        return "Уменьшает следующую атаку врага на 5";
+    void showInfo() const override {
+        cout << "Воин | HP: " << hp
+             << " | Атака: " << attack
+             << " | Обладает большим запасом здоровья\n";
     }
 };
 
+// ================= КЛАСС МАГА =================
 
-class Guardian : public Hero {
+class Mage : public Hero {
 public:
-    Guardian() : Hero("Страж", 140, 10) {}
+    Mage() : Hero("Маг", 90, 30) {}
 
-    void useAbility(Hero& enemy) override {
-        activateShield(12);
-
-        cout << name
-             << " использует способность: "
-             << "магический щит!\n";
-
-        cout << "Следующий полученный урон "
-             << "будет уменьшен на 12.\n";
+    int getBaseDamage() const override {
+        return attack;
     }
 
-    string getAbilityName() const override {
-        return "Магический щит";
-    }
-
-    string getAbilityDescription() const override {
-        return "Поглощает до 12 урона";
+    void showInfo() const override {
+        cout << "Маг | HP: " << hp
+             << " | Атака: " << attack
+             << " | Обладает мощной атакой\n";
     }
 };
 
+// ================= КЛАСС МЕНЕДЖЕРА =================
 
 class GameManager {
 private:
+    vector<unique_ptr<Hero>> heroes;
     mt19937 rng;
 
-    unique_ptr<Hero> createHero(int choice) {
-        switch (choice) {
-        case 1:
-            return make_unique<Archer>();
-
-        case 2:
-            return make_unique<Warrior>();
-
-        case 3:
-            return make_unique<Guardian>();
-
-        default:
-            return nullptr;
-        }
-    }
-
-    int readChoice(int minValue, int maxValue) {
-        int choice;
-
+    // Безопасный ввод числа
+    int readNumber(int min, int max) {
         while (true) {
-            cout << "Ваш выбор: ";
+            try {
+                string input;
+                getline(cin, input);
 
-            if (cin >> choice &&
-                choice >= minValue &&
-                choice <= maxValue) {
-                return choice;
+                size_t pos;
+                int number = stoi(input, &pos);
+
+                if (pos != input.size())
+                    throw invalid_argument("Некорректный ввод");
+
+                if (number < min || number > max)
+                    throw out_of_range("Число вне диапазона");
+
+                return number;
             }
-
-            cout << "Ошибка! Введите число от "
-                 << minValue << " до "
-                 << maxValue << ".\n";
-
-            cin.clear();
-            cin.ignore(
-                numeric_limits<streamsize>::max(), '\n'
-            );
+            catch (const exception&) {
+                cout << "Ошибка! Введите число от "
+                     << min << " до " << max << ": ";
+            }
         }
     }
 
-    void showHeroMenu() {
-        cout << "\n========== ВЫБОР ГЕРОЯ ==========\n";
+    // Случайный урон с разбросом +-5
+    int calculateDamage(Hero& hero) {
+        uniform_int_distribution<int> distribution(-5, 5);
 
-        cout << "1. Лучник\n";
-        cout << "   HP: 90 | Урон: 15\n";
-        cout << "   Способность: Меткий выстрел\n\n";
+        int damage = hero.getBaseDamage()
+                   + distribution(rng);
 
-        cout << "2. Воин\n";
-        cout << "   HP: 120 | Урон: 12\n";
-        cout << "   Способность: Ослабление\n\n";
+        return max(1, damage);
+    }
 
-        cout << "3. Страж\n";
-        cout << "   HP: 140 | Урон: 10\n";
-        cout << "   Способность: Магический щит\n\n";
+    // Выбор героя игроком
+    int selectHero() {
+        cout << "\n===== ВЫБОР ГЕРОЯ =====\n";
+
+        for (int i = 0; i < heroes.size(); i++) {
+            cout << i + 1 << ". ";
+            heroes[i]->showInfo();
+        }
 
         cout << "0. Выход\n";
-        cout << "=================================\n";
+        cout << "Ваш выбор: ";
+
+        return readNumber(0, 3);
     }
 
-    void showEnemyMenu(int playerChoice) {
-        cout << "\n========== ВЫБОР ПРОТИВНИКА ==========\n";
+    // Выбор противника
+    int selectEnemy(int playerIndex) {
+        cout << "\n===== ВЫБОР ПРОТИВНИКА =====\n";
 
-        for (int i = 1; i <= 3; i++) {
-            if (i != playerChoice) {
-                cout << i << ". ";
+        for (int i = 0; i < heroes.size(); i++) {
+            if (i == playerIndex)
+                continue;
 
-                if (i == 1) cout << "Лучник\n";
-                if (i == 2) cout << "Воин\n";
-                if (i == 3) cout << "Страж\n";
-            }
+            cout << i + 1 << ". ";
+            heroes[i]->showInfo();
         }
 
-        cout << "=====================================\n";
+        cout << "Ваш выбор: ";
+
+        while (true) {
+            int choice = readNumber(1, 3);
+
+            if (choice - 1 != playerIndex)
+                return choice - 1;
+
+            cout << "Нельзя выбрать своего героя!\n";
+            cout << "Выберите другого противника: ";
+        }
     }
 
+    // Ход игрока
     void playerTurn(Hero& player, Hero& enemy) {
-        cout << "\n========== ВАШ ХОД ==========\n";
-
-        player.showInfo();
-        enemy.showInfo();
-
-        cout << "\n1. Атака\n";
+        cout << "\nВаш ход!\n";
+        cout << "1. Атака\n";
         cout << "2. Защита\n";
-        cout << "3. Способность ("
-             << player.getAbilityName() << ")\n";
+        cout << "Выберите действие: ";
 
-        int choice = readChoice(1, 3);
+        int choice = readNumber(1, 2);
 
-        switch (choice) {
-        case 1:
-            player.attack(enemy, rng);
-            break;
+        if (choice == 1) {
+            int damage = calculateDamage(player);
 
-        case 2:
+            cout << player.getName()
+                 << " атакует противника!\n";
+
+            enemy.takeDamage(damage);
+        }
+        else {
             player.defend();
-            break;
-
-        case 3:
-            player.useAbility(enemy);
-            break;
         }
     }
 
     // Ход компьютера
     void enemyTurn(Hero& enemy, Hero& player) {
-        cout << "\n========== ХОД ПРОТИВНИКА ==========\n";
-
-        uniform_int_distribution<int> action(1, 3);
+        uniform_int_distribution<int> action(1, 2);
 
         int choice = action(rng);
 
-        switch (choice) {
-        case 1:
-            enemy.attack(player, rng);
-            break;
+        cout << "\nХод противника!\n";
 
-        case 2:
+        if (choice == 1) {
+            int damage = calculateDamage(enemy);
+
+            cout << enemy.getName()
+                 << " атакует!\n";
+
+            player.takeDamage(damage);
+        }
+        else {
             enemy.defend();
-            break;
-
-        case 3:
-            enemy.useAbility(player);
-            break;
         }
     }
 
+    // Проведение боя
     void startBattle(Hero& player, Hero& enemy) {
-        cout << "\n=================================\n";
-        cout << "         НАЧАЛО БОЯ!\n";
+        player.reset();
+        enemy.reset();
+
+        cout << "\n============================\n";
+        cout << "       НАЧАЛО БОЯ!\n";
+        cout << "============================\n";
+
         cout << player.getName()
              << " VS " << enemy.getName() << "\n";
-        cout << "=================================\n";
 
-        uniform_int_distribution<int> firstTurn(0, 1);
+        // Случайное определение первого хода
+        uniform_int_distribution<int> turnOrder(0, 1);
 
-        bool playerFirst = firstTurn(rng) == 0;
+        bool playerFirst = turnOrder(rng) == 0;
 
-        cout << "\n";
-
-        if (playerFirst) {
-            cout << "Вы ходите первыми!\n";
-        }
-        else {
-            cout << "Противник ходит первым!\n";
-        }
-
-        bool playerTurnNow = playerFirst;
+        if (playerFirst)
+            cout << "Первым ходит игрок!\n";
+        else
+            cout << "Первым ходит противник!\n";
 
         while (player.isAlive() && enemy.isAlive()) {
 
-            if (playerTurnNow) {
+            if (playerFirst) {
                 playerTurn(player, enemy);
+
+                if (enemy.isAlive())
+                    enemyTurn(enemy, player);
             }
             else {
                 enemyTurn(enemy, player);
+
+                if (player.isAlive())
+                    playerTurn(player, enemy);
             }
 
-            if (!player.isAlive() || !enemy.isAlive())
-                break;
+            playerFirst = !playerFirst;
 
-            playerTurnNow = !playerTurnNow;
+            cout << "\n----------------------------\n";
+            cout << player.getName()
+                 << " HP: " << player.getHp() << "\n";
+
+            cout << enemy.getName()
+                 << " HP: " << enemy.getHp() << "\n";
+            cout << "----------------------------\n";
         }
 
-        cout << "\n========== РЕЗУЛЬТАТ БОЯ ==========\n";
-
+        // Результат боя
         if (player.isAlive()) {
-            cout << "ПОБЕДА! Вы выиграли сражение!\n";
+            cout << "\nПОБЕДА! Вы выиграли сражение!\n";
         }
         else {
-            cout << "ПОРАЖЕНИЕ! Вы проиграли сражение.\n";
+            cout << "\nПОРАЖЕНИЕ! Ваш герой пал.\n";
             cout << "Игра окончена.\n";
         }
-
-        cout << "===================================\n";
     }
 
 public:
-    GameManager() : rng(random_device{}()) {}
+    GameManager() : rng(random_device{}()) {
+        heroes.push_back(make_unique<Archer>());
+        heroes.push_back(make_unique<Warrior>());
+        heroes.push_back(make_unique<Mage>());
+    }
 
+    // Главное меню
     void run() {
-        cout << "=================================\n";
-        cout << "        АРЕНА ГЕРОЕВ\n";
-        cout << "=================================\n";
+        cout << "============================\n";
+        cout << "       АРЕНА ГЕРОЕВ\n";
+        cout << "============================\n";
 
         while (true) {
-            showHeroMenu();
+            cout << "\n===== ГЛАВНОЕ МЕНЮ =====\n";
+            cout << "1. Выбрать героя\n";
+            cout << "0. Выход из игры\n";
+            cout << "Ваш выбор: ";
 
-            int playerChoice = readChoice(0, 3);
+            int choice = readNumber(0, 1);
 
-            if (playerChoice == 0) {
+            if (choice == 0) {
                 cout << "Выход из игры. До свидания!\n";
                 break;
             }
 
-            unique_ptr<Hero> player =
-                createHero(playerChoice);
+            int playerIndex = selectHero();
 
-            showEnemyMenu(playerChoice);
-
-            int enemyChoice = readChoice(1, 3);
-
-            while (enemyChoice == playerChoice) {
-                cout << "Нельзя выбрать самого себя!\n";
-                enemyChoice = readChoice(1, 3);
+            if (playerIndex == 0) {
+                cout << "Возврат в главное меню.\n";
+                continue;
             }
 
-            unique_ptr<Hero> enemy =
-                createHero(enemyChoice);
+            playerIndex--;
 
-            startBattle(*player, *enemy);
+            cout << "\nВы выбрали: "
+                 << heroes[playerIndex]->getName() << "\n";
 
-            cout << "\n1. Новая игра\n";
-            cout << "0. Выход\n";
+            int enemyIndex = selectEnemy(playerIndex);
 
-            int again = readChoice(0, 1);
+            startBattle(
+                *heroes[playerIndex],
+                *heroes[enemyIndex]
+            );
 
-            if (again == 0) {
-                cout << "Спасибо за игру!\n";
+            if (!heroes[playerIndex]->isAlive()) {
                 break;
             }
+
+            cout << "\nБой завершен! Возвращение в меню.\n";
         }
     }
 };
 
+// ================= ГЛАВНАЯ ФУНКЦИЯ =================
 
 int main() {
     try {
+        setlocale(LC_ALL, "");
+
         GameManager game;
         game.run();
     }
     catch (const exception& e) {
-        cerr << "Произошла ошибка: "
-             << e.what() << endl;
-
-        return 1;
-    }
-    catch (...) {
-        cerr << "Произошла неизвестная ошибка!\n";
-
+        cerr << "Критическая ошибка: "
+             << e.what() << "\n";
         return 1;
     }
 
