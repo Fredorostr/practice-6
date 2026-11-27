@@ -8,8 +8,6 @@
 
 using namespace std;
 
-// ================= БАЗОВЫЙ КЛАСС =================
-
 class Hero {
 protected:
     string name;
@@ -19,9 +17,7 @@ protected:
     bool defending;
 
 public:
-    Hero(string n, int health, int damage)
-        : name(n), hp(health), maxHp(health),
-          attack(damage), defending(false) {}
+    Hero(string n, int health, int damage): name(n), hp(health), maxHp(health), attack(damage), defending(false) {}
 
     virtual ~Hero() = default;
 
@@ -75,7 +71,6 @@ public:
     }
 };
 
-// ================= КЛАСС ЛУЧНИКА =================
 
 class Archer : public Hero {
 public:
@@ -92,7 +87,6 @@ public:
     }
 };
 
-// ================= КЛАСС ВОИНА =================
 
 class Warrior : public Hero {
 public:
@@ -109,7 +103,6 @@ public:
     }
 };
 
-// ================= КЛАСС МАГА =================
 
 class Mage : public Hero {
 public:
@@ -126,14 +119,12 @@ public:
     }
 };
 
-// ================= КЛАСС МЕНЕДЖЕРА =================
 
 class GameManager {
 private:
     vector<unique_ptr<Hero>> heroes;
     mt19937 rng;
 
-    // Безопасный ввод числа
     int readNumber(int min, int max) {
         while (true) {
             try {
@@ -158,7 +149,6 @@ private:
         }
     }
 
-    // Случайный урон с разбросом +-5
     int calculateDamage(Hero& hero) {
         uniform_int_distribution<int> distribution(-5, 5);
 
@@ -168,7 +158,6 @@ private:
         return max(1, damage);
     }
 
-    // Выбор героя игроком
     int selectHero() {
         cout << "\n===== ВЫБОР ГЕРОЯ =====\n";
 
@@ -183,7 +172,6 @@ private:
         return readNumber(0, 3);
     }
 
-    // Выбор противника
     int selectEnemy(int playerIndex) {
         cout << "\n===== ВЫБОР ПРОТИВНИКА =====\n";
 
@@ -208,7 +196,6 @@ private:
         }
     }
 
-    // Ход игрока
     void playerTurn(Hero& player, Hero& enemy) {
         cout << "\nВаш ход!\n";
         cout << "1. Атака\n";
@@ -230,7 +217,6 @@ private:
         }
     }
 
-    // Ход компьютера
     void enemyTurn(Hero& enemy, Hero& player) {
         uniform_int_distribution<int> action(1, 2);
 
@@ -251,7 +237,6 @@ private:
         }
     }
 
-    // Проведение боя
     void startBattle(Hero& player, Hero& enemy) {
         player.reset();
         enemy.reset();
@@ -299,7 +284,6 @@ private:
             cout << "----------------------------\n";
         }
 
-        // Результат боя
         if (player.isAlive()) {
             cout << "\nПОБЕДА! Вы выиграли сражение!\n";
         }
@@ -316,7 +300,6 @@ public:
         heroes.push_back(make_unique<Mage>());
     }
 
-    // Главное меню
     void run() {
         cout << "============================\n";
         cout << "       АРЕНА ГЕРОЕВ\n";
@@ -363,7 +346,6 @@ public:
     }
 };
 
-// ================= ГЛАВНАЯ ФУНКЦИЯ =================
 
 int main() {
     try {
